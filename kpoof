@@ -1,0 +1,126 @@
+#!/bin/bash
+#
+# See usage().
+
+[[ -n $DEBUG ]] && set -x
+
+set -eou pipefail
+IFS=$'\n\t'
+
+# We do this so the called script name variable is available in utility functions
+# below, in case of name change, brew alias, etc.
+SCRIPT=`basename ${BASH_SOURCE[0]}`
+
+usage() {
+  cat <<EOF
+${SCRIPT}(1)
+
+NAME
+    ${SCRIPT} - Quick k8s pod port-forward utility.
+
+REQUIRES
+    kubectl(1)
+
+SYNOPSIS
+    ${SCRIPT} [OPTIONS]
+
+DESCRIPTION
+    ${SCRIPT} is a quick kubernetes (k8s) utility to port-foward a pod to localhost (127.0.0.1). ${SCRIPT} prompts for:
+      - <NAMESPACE> (defaults to current ns. See kubens(1))
+      - <POD> (defaults to "1")
+      - <PORT> (defaults to the exposed port of the pod)
+    ENTER to use defaults.
+
+OPTIONS
+    -h, --help
+        Show this help message
+
+SEE ALSO
+    kubectx(1), kubens(1)
+EOF
+}
+
+ns_current() {
+  # Borrowed partly from kubens current_namespace().
+  cur_ctx=$(kubectl config current-context)
+  echo "$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"${cur_ctx}\")].context.namespace}")"
+}
+
+ns_param() {
+  local ns=$(ns_select)
+  if [[ ! -z ${ns:-} ]]; then
+    echo "--namespace=${ns}"
+  fi
+}
+
+ns_list() {
+  kubectl get namespaces -o=jsonpath='{range .items[*].metadata.name}{@}{"\n"}{end}'
+}
+
+ns_number_list() {
+  ns_list | nl
+}
+
+ns_select() {
+  if [[ ! -z ${NS:-} ]]; then
+    ns_list | sed -n ${NS}p
+  elif [[ ! -z ${NAMESPACE:-} ]]; then
+    echo $NAMESPACE
+  else
+    ns_current
+  fi
+}
+
+po_list() {
+  kubectl $(ns_param) \
+    get pods \
+    -o=jsonpath='{range .items[*].metadata.name}{@}{"\n"}{end}'
+}
+
+po_number_list() {
+  po_list | nl
+}
+
+po_select() {
+  po_list | sed -n ${POD:-1}p
+}
+
+po_port_sniff() {
+  kubectl describe pod $(po_select) |grep Port: |grep /TCP|awk '{print $2}'|tr -dc '0-9'
+}
+
+# $(po_port_sniff):${PORT:-$(po_port_sniff)
+
+po_pf() {
+  kubectl port-forward \
+    $(po_select) $(ns_param) $(po_port_sniff):$(po_port_sniff)
+}
+
+# Transform long options to short ones. Sick trick.
+# http://stackoverflow.com/a/30026641/4096495
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "--help")       set -- "$@" "-h" ;;
+    *)              set -- "$@" "$arg"
+  esac
+done
+
+while getopts :h OPT; do
+  case $OPT in
+    h ) HELP=true;;
+    \?) echo "Unknown option: -$OPTARG" >&2; exit 1;;
+    : ) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
+  esac
+done
+shift $((OPTIND-1))
+
+# Usage, list, and exec should not happen simultaneously, so elif.
+if [[ ${HELP:-} == 'true' ]]; then
+  usage; exit 0
+else
+  ns=$(ns_current)
+  echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
+  echo 'Pod number? (default 1):'; po_number_list; read POD;
+  po_pf
+fi
