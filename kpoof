@@ -28,7 +28,7 @@ DESCRIPTION
     ${SCRIPT} is a quick kubernetes (k8s) utility to port-foward a pod to localhost (127.0.0.1). ${SCRIPT} prompts for:
       - <NAMESPACE> (defaults to current ns. See kubens(1))
       - <POD> (defaults to "1")
-      - <PORT> (defaults to the exposed port of the pod)
+    #  - <PORT> (defaults to the exposed port of the pod)
     ENTER to use defaults.
 
 OPTIONS
@@ -86,10 +86,8 @@ po_select() {
 }
 
 po_port_sniff() {
-  kubectl describe pod $(po_select) |grep Port: |grep /TCP|awk '{print $2}'|tr -dc '0-9'
+  kubectl describe pod $(ns_param) $(po_select) |grep Port: |grep /TCP|awk '{print $2}'|tr -dc '0-9'
 }
-
-# $(po_port_sniff):${PORT:-$(po_port_sniff)
 
 po_pf() {
   kubectl port-forward \
@@ -115,7 +113,7 @@ while getopts :h OPT; do
 done
 shift $((OPTIND-1))
 
-# Usage, list, and exec should not happen simultaneously, so elif.
+# Usage, list, and port-forward should not happen simultaneously, so elif.
 if [[ ${HELP:-} == 'true' ]]; then
   usage; exit 0
 else
