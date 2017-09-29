@@ -1,4 +1,4 @@
-The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to exec into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.
+The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.
 
 # kpoof
 
