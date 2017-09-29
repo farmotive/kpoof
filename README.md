@@ -6,7 +6,7 @@ The purpose of kpoof is to provide an opinionated port-forwarder into a kubernet
 kpoof(1)
 
 NAME
-    kex - Quick k8s pod port-forward utility.
+    kpoof - Quick k8s pod port-forward utility.
 
 REQUIRES
     kubectl(1)
