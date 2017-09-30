@@ -15,7 +15,7 @@ SYNOPSIS
     kpoof [OPTIONS]
 
 DESCRIPTION
-    kpoof is a quick kubernetes (k8s) utility to port-foward an exposed port of a pod. kpoof prompts for:
+    kpoof is a quick kubernetes (k8s) utility to port-forward an exposed port of a pod. kpoof prompts for:
     - <NAMESPACE> (defaults to current ns. See kubens(1))
     - <POD> (defaults to "1")
     - <LOCAL_PORT> (defaults to the exposed port of the pod)
