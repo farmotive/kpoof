@@ -101,7 +101,7 @@ port_list() {
 # See second caveat: https://stackoverflow.com/a/414258/4096495
 port_check() {
   if [[ $1 -lt 1001 ]]; then
-    echo "$(($i+50000))";
+    echo "$(($1+50000))";
   else
     echo $1;
   fi
@@ -109,7 +109,7 @@ port_check() {
 
 port_x() {
   for i in $(port_list); do
-    echo port_check "$i"
+    echo $(port_check $i)
   done
 }
 
@@ -122,9 +122,9 @@ port_sniff() {
 }
 
 po_pf() {
-  LOCAL_CHECK=$(port_check LOCAL_PORT)
+  LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
   kubectl port-forward \
-    $(ns_param) $(po_select) ${LOCAL_CHECK:-$(port_sniff)}:${REMOTE_PORT:-$(port_sniff)}
+    $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)}
 }
 
 po_pf_all() {
