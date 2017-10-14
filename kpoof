@@ -95,6 +95,9 @@ po_port_list() {
   | sort -u
 }
 
+# Because \*nix denies binding to ports below 1001, we assign a port of N+50000,
+# where `n` is a sub-1001 port.
+# See second caveat: https://stackoverflow.com/a/414258/4096495
 po_port_x() {
   for i in $(po_port_list); do
     if [[ "$i" -lt 1001 ]]; then
