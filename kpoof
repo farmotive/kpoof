@@ -122,8 +122,9 @@ port_sniff() {
 }
 
 po_pf() {
+  LOCAL_CHECK=$(port_check LOCAL_PORT)
   kubectl port-forward \
-    $(ns_param) $(po_select) ${(port_check LOCAL_PORT):-$(port_sniff)}:${REMOTE_PORT:-$(port_sniff)}
+    $(ns_param) $(po_select) ${LOCAL_CHECK:-$(port_sniff)}:${REMOTE_PORT:-$(port_sniff)}
 }
 
 po_pf_all() {
