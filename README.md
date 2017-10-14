@@ -1,4 +1,4 @@
-The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.  If the target pod has more than one exposed port, kpoof will port-forward the first exposed port.
+The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.  If the target pod has more than one exposed port, you may select a lone port with the `-p` or `--port` flag.  The default behavior of kpoof is to port-forward all exposed ports.  Because \*nix denies binding to ports below 1001, kpoof assigns a port of `n`+50000, where `n` is a sub-1001 port.
 
 # kpoof
 
@@ -14,16 +14,19 @@ REQUIRES
 SYNOPSIS
     kpoof [OPTIONS]
 
-DESCRIPTION
-    kpoof is a quick kubernetes (k8s) utility to port-forward an exposed port of a pod. kpoof prompts for:
-    - <NAMESPACE> (defaults to current ns. See kubens(1))
-    - <POD> (defaults to "1")
-    - <LOCAL_PORT> (defaults to the exposed port of the pod)
-  ENTER to use defaults.
+  DESCRIPTION
+      ${SCRIPT} is a quick kubernetes (k8s) utility to port-forward a pod to localhost (127.0.0.1). ${SCRIPT} prompts for:
+        - <NAMESPACE> (defaults to current ns. See kubens(1))
+        - <POD> (defaults to "1")
+        - <LOCAL_PORT> (If "-p" or "--port" is envoked, designate an available local port. Defaults to the first exposed port of the pod)
+        - <REMOTE_PORT> (If "-p" or "--port" is envoked, select from the list of remote ports to forward.)
+      ENTER to use defaults.
 
-OPTIONS
-    -h, --help
-        Show this help message
+  OPTIONS
+      -h, --help
+          Show this help message
+      -p, --port
+          Port-forwards to a lone port on the remote host
 
 SEE ALSO
     kubectx(1), kubens(1), kex(1)
@@ -51,10 +54,6 @@ Pod number? (default 1):
     2 bar-mariadb
     3 baz-alpine
 2
-Note: *nix ports below 1000 are denied, i.e., use '8080' if the pod is exposing
-80 or 443. Local port number? (defaults to 3306):
-3307
-
 Forwarding from 127.0.0.1:3307 -> 3306
 ```
 
