@@ -88,38 +88,47 @@ po_select() {
   po_list | sed -n ${POD:-1}p
 }
 
-po_port_list() {
+port_list() {
   kubectl get po $(ns_param) $(po_select)\
   -o=jsonpath='{..containerPort}' \
   | tr " " "\n" \
   | sort -u
 }
 
-po_port_x() {
-  for i in $(po_port_list); do
-    if [[ "$i" -lt 1001 ]]; then
-      echo "$(($i+50000))";
-    else
-      echo $i;
-    fi
+# Because *nix denies binding to ports below 1001, we assign a port of N+50000,
+# where `n` is a sub-1001 port. Much better to adhere to the security protocol
+# than to manipulate the bash binary.
+# See second caveat: https://stackoverflow.com/a/414258/4096495
+port_check() {
+  if [[ $1 -lt 1001 ]]; then
+    echo "$(($1+50000))";
+  else
+    echo $1;
+  fi
+}
+
+port_x() {
+  for i in $(port_list); do
+    echo $(port_check $i)
   done
 }
 
-po_port_number_list() {
-  po_port_list | nl
+port_number_list() {
+  port_list | nl
 }
 
-po_port_sniff() {
-  po_port_list | sed -n ${PO_PORT:-1}p
+port_sniff() {
+  port_list | sed -n ${REMOTE_PORT:-1}p
 }
 
 po_pf() {
+  LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
   kubectl port-forward \
-    $(ns_param) $(po_select) ${LOCAL_PORT:-$(po_port_sniff)}:${PO_PORT:-$(po_port_sniff)}
+    $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)}
 }
 
 po_pf_all() {
-    kubectl port-forward $(ns_param) $(po_select) $(po_port_x)
+    kubectl port-forward $(ns_param) $(po_select) $(port_x)
 }
 
 # Transform long options to short ones. Sick trick.
@@ -143,19 +152,19 @@ while getopts :ph OPT; do
 done
 shift $((OPTIND-1))
 
-# Usage, all, and port-forward should not happen simultaneously, so elif.
+# Help and port-forward should not happen simultaneously, so elif.
 if [[ ${HELP:-} == 'true' ]]; then
   usage; exit 0
-elif [[ ${PORT:-} == 'true' ]]; then
-  ns=$(ns_current)
-  echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
-  echo 'Pod number? (default 1):'; po_number_list; read POD;
-  echo 'Remote port number? (default 1):'; po_port_number_list; read PO_PORT;
-  echo "Local port number? (defaults to $(po_port_sniff)):"; read LOCAL_PORT;
-  po_pf
 else
   ns=$(ns_current)
   echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
   echo 'Pod number? (default 1):'; po_number_list; read POD;
-  po_pf_all
+
+  if [[ ${PORT:-} == 'true' ]]; then
+    echo 'Remote port number? (default 1):'; port_number_list; read REMOTE_PORT;
+    echo "Local port number? (defaults to $(port_sniff)):"; read LOCAL_PORT;
+    po_pf
+  else
+    po_pf_all
+  fi
 fi
