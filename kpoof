@@ -88,7 +88,7 @@ po_select() {
   po_list | sed -n ${POD:-1}p
 }
 
-po_port_list() {
+port_list() {
   kubectl get po $(ns_param) $(po_select)\
   -o=jsonpath='{..containerPort}' \
   | tr " " "\n" \
@@ -98,8 +98,8 @@ po_port_list() {
 # Because \*nix denies binding to ports below 1001, we assign a port of N+50000,
 # where `n` is a sub-1001 port.
 # See second caveat: https://stackoverflow.com/a/414258/4096495
-po_port_x() {
-  for i in $(po_port_list); do
+port_x() {
+  for i in $(port_list); do
     if [[ "$i" -lt 1001 ]]; then
       echo "$(($i+50000))";
     else
@@ -108,21 +108,21 @@ po_port_x() {
   done
 }
 
-po_port_number_list() {
-  po_port_list | nl
+port_number_list() {
+  port_list | nl
 }
 
-po_port_sniff() {
-  po_port_list | sed -n ${PO_PORT:-1}p
+port_sniff() {
+  port_list | sed -n ${REMOTE_PORT:-1}p
 }
 
 po_pf() {
   kubectl port-forward \
-    $(ns_param) $(po_select) ${LOCAL_PORT:-$(po_port_sniff)}:${PO_PORT:-$(po_port_sniff)}
+    $(ns_param) $(po_select) ${LOCAL_PORT:-$(port_sniff)}:${REMOTE_PORT:-$(port_sniff)}
 }
 
 po_pf_all() {
-    kubectl port-forward $(ns_param) $(po_select) $(po_port_x)
+    kubectl port-forward $(ns_param) $(po_select) $(port_x)
 }
 
 # Transform long options to short ones. Sick trick.
@@ -155,8 +155,8 @@ else
   echo 'Pod number? (default 1):'; po_number_list; read POD;
 
   if [[ ${PORT:-} == 'true' ]]; then
-    echo 'Remote port number? (default 1):'; po_port_number_list; read PO_PORT;
-    echo "Local port number? (defaults to $(po_port_sniff)):"; read LOCAL_PORT;
+    echo 'Remote port number? (default 1):'; port_number_list; read REMOTE_PORT;
+    echo "Local port number? (defaults to $(port_sniff)):"; read LOCAL_PORT;
     po_pf
   else
     po_pf_all
