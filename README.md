@@ -1,5 +1,7 @@
 The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.  If the target pod has more than one exposed port, you may select a lone port with the `-p` or `--port` flag.  The default behavior of kpoof is to port-forward all exposed ports.  Because \*nix denies binding to ports below 1001, kpoof assigns a port of `n`+50000, where `n` is a sub-1001 port.
 
+[![asciicast](https://asciinema.org/a/25uPOaAWcOX01uAh6DviaGtPc)](https://asciinema.org/a/25uPOaAWcOX01uAh6DviaGtPc)
+
 # kpoof
 
 ```sh
@@ -31,8 +33,6 @@ SYNOPSIS
 SEE ALSO
     kubectx(1), kubens(1), kex(1)
 ```
-
-[![asciicast](https://asciinema.org/a/25uPOaAWcOX01uAh6DviaGtPc)](https://asciinema.org/a/25uPOaAWcOX01uAh6DviaGtPc)
 
 ### USAGE
 
