@@ -96,15 +96,20 @@ port_list() {
 }
 
 # Because \*nix denies binding to ports below 1001, we assign a port of N+50000,
-# where `n` is a sub-1001 port.
+# where `n` is a sub-1001 port. Much better to adhere to the security protocol
+# than to manipulate the bash binary.
 # See second caveat: https://stackoverflow.com/a/414258/4096495
+port_check() {
+  if [[ "$1" -lt 1001 ]]; then
+    echo "$(($i+50000))";
+  else
+    echo $i;
+  fi
+}
+
 port_x() {
   for i in $(port_list); do
-    if [[ "$i" -lt 1001 ]]; then
-      echo "$(($i+50000))";
-    else
-      echo $i;
-    fi
+    echo port_check "$i"
   done
 }
 
@@ -118,7 +123,7 @@ port_sniff() {
 
 po_pf() {
   kubectl port-forward \
-    $(ns_param) $(po_select) ${LOCAL_PORT:-$(port_sniff)}:${REMOTE_PORT:-$(port_sniff)}
+    $(ns_param) $(po_select) ${(port_check LOCAL_PORT):-$(port_sniff)}:${REMOTE_PORT:-$(port_sniff)}
 }
 
 po_pf_all() {
