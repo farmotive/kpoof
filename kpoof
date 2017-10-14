@@ -95,7 +95,7 @@ port_list() {
   | sort -u
 }
 
-# Because \*nix denies binding to ports below 1001, we assign a port of N+50000,
+# Because *nix denies binding to ports below 1001, we assign a port of N+50000,
 # where `n` is a sub-1001 port. Much better to adhere to the security protocol
 # than to manipulate the bash binary.
 # See second caveat: https://stackoverflow.com/a/414258/4096495
