@@ -32,6 +32,8 @@ SEE ALSO
     kubectx(1), kubens(1), kex(1)
 ```
 
+[![asciicast](https://asciinema.org/a/25uPOaAWcOX01uAh6DviaGtPc)](https://asciinema.org/a/25uPOaAWcOX01uAh6DviaGtPc)
+
 ### USAGE
 
 ```sh
