@@ -28,15 +28,18 @@ DESCRIPTION
     ${SCRIPT} is a quick kubernetes (k8s) utility to port-forward a pod to localhost (127.0.0.1). ${SCRIPT} prompts for:
       - <NAMESPACE> (defaults to current ns. See kubens(1))
       - <POD> (defaults to "1")
-      - <LOCAL_PORT> (defaults to the exposed port of the pod)
+      - <LOCAL_PORT> (If "-p" or "--port" is envoked, designate an available local port. Defaults to the first exposed port of the pod)
+      - <REMOTE_PORT> (If "-p" or "--port" is envoked, select from the list of remote ports to forward.)
     ENTER to use defaults.
 
 OPTIONS
     -h, --help
         Show this help message
+    -p, --port
+        Port-forwards to a lone port on the remote host
 
 SEE ALSO
-    kubectx(1), kubens(1)
+    kubectx(1), kubens(1), kex(1)
 EOF
 }
 
@@ -85,17 +88,38 @@ po_select() {
   po_list | sed -n ${POD:-1}p
 }
 
+po_port_list() {
+  kubectl get po $(ns_param) $(po_select)\
+  -o=jsonpath='{..containerPort}' \
+  | tr " " "\n" \
+  | sort -u
+}
+
+po_port_x() {
+  for i in $(po_port_list); do
+    if [[ "$i" -lt 1001 ]]; then
+      echo "$(($i+50000))";
+    else
+      echo $i;
+    fi
+  done
+}
+
+po_port_number_list() {
+  po_port_list | nl
+}
+
 po_port_sniff() {
-  if [[ ! -z $(kubectl describe pod $(ns_param) $(po_select) |grep Ports:) ]]; then
-    kubectl describe pod $(ns_param) $(po_select) |grep Ports: |grep /TCP|awk '{print $2}'|tr -dc '0-9';
-  else
-    kubectl describe pod $(ns_param) $(po_select) |grep Port: |grep /TCP|awk '{print $2}'|tr -dc '0-9'
-  fi
+  po_port_list | sed -n ${PO_PORT:-1}p
 }
 
 po_pf() {
   kubectl port-forward \
-    $(po_select) $(ns_param) ${LOCAL_PORT:-$(po_port_sniff)}:$(po_port_sniff)
+    $(ns_param) $(po_select) ${LOCAL_PORT:-$(po_port_sniff)}:${PO_PORT:-$(po_port_sniff)}
+}
+
+po_pf_all() {
+    kubectl port-forward $(ns_param) $(po_select) $(po_port_x)
 }
 
 # Transform long options to short ones. Sick trick.
@@ -104,26 +128,34 @@ for arg in "$@"; do
   shift
   case "$arg" in
     "--help")       set -- "$@" "-h" ;;
+    "--port")        set -- "$@" "-p" ;;
     *)              set -- "$@" "$arg"
   esac
 done
 
-while getopts :h OPT; do
+while getopts :ph OPT; do
   case $OPT in
     h ) HELP=true;;
+    p ) PORT=true;;
     \?) echo "Unknown option: -$OPTARG" >&2; exit 1;;
     : ) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
   esac
 done
 shift $((OPTIND-1))
 
-# Usage, list, and port-forward should not happen simultaneously, so elif.
+# Usage, all, and port-forward should not happen simultaneously, so elif.
 if [[ ${HELP:-} == 'true' ]]; then
   usage; exit 0
+elif [[ ${PORT:-} == 'true' ]]; then
+  ns=$(ns_current)
+  echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
+  echo 'Pod number? (default 1):'; po_number_list; read POD;
+  echo 'Remote port number? (default 1):'; po_port_number_list; read PO_PORT;
+  echo "Local port number? (defaults to $(po_port_sniff)):"; read LOCAL_PORT;
+  po_pf
 else
   ns=$(ns_current)
   echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
   echo 'Pod number? (default 1):'; po_number_list; read POD;
-  echo "Note: *nix ports below 1000 are denied, i.e., use '8080' if the pod is exposing 80 or 443. Local port number? (defaults to $(po_port_sniff)):"; read LOCAL_PORT;
-  po_pf
+  po_pf_all
 fi
