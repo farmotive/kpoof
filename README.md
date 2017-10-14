@@ -54,7 +54,7 @@ Pod number? (default 1):
     2 bar-mariadb
     3 baz-alpine
 2
-Forwarding from 127.0.0.1:3307 -> 3306
+Forwarding from 127.0.0.1:3306 -> 3306
 ```
 
 ## Installation
