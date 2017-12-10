@@ -113,19 +113,6 @@ port_x() {
   done
 }
 
-# We must respect the remote port without a transformation
-# port_x_remote() {
-#   for i in $(port_list); do
-#     echo $(port_list $i)
-#   done
-# }
-
-# port_all() {
-#   for i in $(port_list); do
-#     echo "$(($(port_x):$(port_list)))"
-#   done
-# }
-
 port_number_list() {
   port_list | nl
 }
