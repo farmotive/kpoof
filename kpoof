@@ -109,9 +109,22 @@ port_check() {
 
 port_x() {
   for i in $(port_list); do
-    echo $(port_check $i)
+    echo $(port_check $i):${i}
   done
 }
+
+# We must respect the remote port without a transformation
+# port_x_remote() {
+#   for i in $(port_list); do
+#     echo $(port_list $i)
+#   done
+# }
+
+# port_all() {
+#   for i in $(port_list); do
+#     echo "$(($(port_x):$(port_list)))"
+#   done
+# }
 
 port_number_list() {
   port_list | nl
@@ -128,7 +141,8 @@ po_pf() {
 }
 
 po_pf_all() {
-    kubectl port-forward $(ns_param) $(po_select) $(port_x)
+    kubectl port-forward \
+    $(ns_param) $(po_select) $(port_x)
 }
 
 # Transform long options to short ones. Sick trick.
