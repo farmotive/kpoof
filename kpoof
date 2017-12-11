@@ -109,7 +109,7 @@ port_check() {
 
 port_x() {
   for i in $(port_list); do
-    echo $(port_check $i)
+    echo $(port_check $i):${i}
   done
 }
 
@@ -128,7 +128,8 @@ po_pf() {
 }
 
 po_pf_all() {
-    kubectl port-forward $(ns_param) $(po_select) $(port_x)
+    kubectl port-forward \
+    $(ns_param) $(po_select) $(port_x)
 }
 
 # Transform long options to short ones. Sick trick.
