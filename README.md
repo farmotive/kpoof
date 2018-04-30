@@ -29,6 +29,8 @@ SYNOPSIS
           Show this help message
       -p, --port
           Port-forwards to a lone port on the remote host
+      -d, --daemon
+          Run kpoof as a daemon
 
 SEE ALSO
     kubectx(1), kubens(1), kex(1)

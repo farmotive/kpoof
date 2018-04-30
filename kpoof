@@ -37,6 +37,8 @@ OPTIONS
         Show this help message
     -p, --port
         Port-forwards to a lone port on the remote host
+    -d, --daemon
+        Run kpoof as a daemon
 
 SEE ALSO
     kubectx(1), kubens(1), kex(1)
@@ -132,21 +134,34 @@ po_pf_all() {
     $(ns_param) $(po_select) $(port_x)
 }
 
+po_pf_daemon() {
+  LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
+  kubectl port-forward \
+    $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)} >kpoof-output.txt 2>&1 < /dev/null &
+}
+
+po_pf_daemon_all() {
+    kubectl port-forward \
+    $(ns_param) $(po_select) $(port_x) >kpoof-output.txt 2>&1 < /dev/null &
+}
+
 # Transform long options to short ones. Sick trick.
 # http://stackoverflow.com/a/30026641/4096495
 for arg in "$@"; do
   shift
   case "$arg" in
     "--help")       set -- "$@" "-h" ;;
-    "--port")        set -- "$@" "-p" ;;
+    "--port")       set -- "$@" "-p" ;;
+    "--daemon")     set -- "$@" "-d" ;;
     *)              set -- "$@" "$arg"
   esac
 done
 
-while getopts :ph OPT; do
+while getopts :phd OPT; do
   case $OPT in
     h ) HELP=true;;
     p ) PORT=true;;
+    d ) DAEMON=true;;
     \?) echo "Unknown option: -$OPTARG" >&2; exit 1;;
     : ) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
   esac
@@ -164,8 +179,16 @@ else
   if [[ ${PORT:-} == 'true' ]]; then
     echo 'Remote port number? (default 1):'; port_number_list; read REMOTE_PORT;
     echo "Local port number? (defaults to $(port_sniff)):"; read LOCAL_PORT;
-    po_pf
+    if [[ ${DAEMON:-} == 'true' ]]; then
+      po_pf_daemon
+    else
+      po_pf
+    fi
   else
-    po_pf_all
+    if [[ ${DAEMON:-} == 'true' ]]; then
+      po_pf_daemon_all
+    else
+      po_pf_all
+    fi
   fi
 fi
