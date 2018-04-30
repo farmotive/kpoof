@@ -38,7 +38,9 @@ OPTIONS
     -p, --port
         Port-forwards to a lone port on the remote host
     -d, --daemon
-        Run kpoof as a daemon
+        Runs kpoof command as a daemon
+    -k, --kill
+        Kills a kpoof command daemon, if running
 
 SEE ALSO
     kubectx(1), kubens(1), kex(1)
@@ -125,24 +127,29 @@ port_sniff() {
 
 po_pf() {
   LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
-  kubectl port-forward \
-    $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)}
+  # We eval so that the ampersand that may be returned by daemon() will start a
+  # process.
+  eval kubectl port-forward \
+    $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)} $(daemon)
 }
 
 po_pf_all() {
-    kubectl port-forward \
-    $(ns_param) $(po_select) $(port_x)
+  eval kubectl port-forward \
+  $(ns_param) $(po_select) $(port_x) $(daemon)
 }
 
-po_pf_daemon() {
-  LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
-  kubectl port-forward \
-    $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)} >kpoof-output.txt 2>&1 < /dev/null &
+killd() {
+  PID=$(ps -aef | grep 'kubectl port-forward' | grep -v grep | awk '{print $2}')
+  if [ ! -z "$PID" ]; then
+    kill -9 "$PID" || true
+  fi
 }
 
-po_pf_daemon_all() {
-    kubectl port-forward \
-    $(ns_param) $(po_select) $(port_x) >kpoof-output.txt 2>&1 < /dev/null &
+daemon() {
+  killd
+  if [ ! -z "${DAEMON:-}" ]; then
+    echo '> kpoof_daemon_out 2>&1 &'
+  fi
 }
 
 # Transform long options to short ones. Sick trick.
@@ -153,15 +160,17 @@ for arg in "$@"; do
     "--help")       set -- "$@" "-h" ;;
     "--port")       set -- "$@" "-p" ;;
     "--daemon")     set -- "$@" "-d" ;;
+    "--kill")       set -- "$@" "-k" ;;
     *)              set -- "$@" "$arg"
   esac
 done
 
-while getopts :phd OPT; do
+while getopts :phdk OPT; do
   case $OPT in
     h ) HELP=true;;
     p ) PORT=true;;
     d ) DAEMON=true;;
+    k ) KILL=true;;
     \?) echo "Unknown option: -$OPTARG" >&2; exit 1;;
     : ) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
   esac
@@ -171,6 +180,8 @@ shift $((OPTIND-1))
 # Help and port-forward should not happen simultaneously, so elif.
 if [[ ${HELP:-} == 'true' ]]; then
   usage; exit 0
+elif [[ ${KILL:-} == 'true' ]]; then
+  killd; exit 0
 else
   ns=$(ns_current)
   echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
@@ -179,16 +190,8 @@ else
   if [[ ${PORT:-} == 'true' ]]; then
     echo 'Remote port number? (default 1):'; port_number_list; read REMOTE_PORT;
     echo "Local port number? (defaults to $(port_sniff)):"; read LOCAL_PORT;
-    if [[ ${DAEMON:-} == 'true' ]]; then
-      po_pf_daemon
-    else
-      po_pf
-    fi
+    po_pf
   else
-    if [[ ${DAEMON:-} == 'true' ]]; then
-      po_pf_daemon_all
-    else
-      po_pf_all
-    fi
+    po_pf_all
   fi
 fi

@@ -31,6 +31,8 @@ SYNOPSIS
           Port-forwards to a lone port on the remote host
       -d, --daemon
           Run kpoof as a daemon
+      -k, --kill
+          Kills a kpoof command daemon, if running
 
 SEE ALSO
     kubectx(1), kubens(1), kex(1)
