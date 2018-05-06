@@ -204,6 +204,23 @@ daemon() {
 
   # Add to list of running daemons.
   echo $STRING >> ${DAEMONSFILE}
+
+  # Give the user initial output so they have immediate port-forwarding info
+  # even when daemonizing. However, it may take a short time for the kubectl
+  # port-forward command to write output to the logfile, so wait a reasonable
+  # amount of time (10 seconds total, at 1/2 second intervals).
+  for i in $(seq 1 20);
+  do
+    OUTPUT=$(cat ${LOGFILE})
+    if [ ! -z "$OUTPUT" ]; then
+      echo "${OUTPUT}"
+      echo 'When finished, stop this daemon process with kpoof -k, or stop all kubectl port-forward processes with kpoof -a'
+      exit 0
+    fi
+    echo 'Port forwarding is still pending. Waiting...'
+    sleep 0.5
+  done
+  echo "Port forwarding didn't resolve within 10 seconds"
 }
 
 initappdir() {
