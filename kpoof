@@ -34,15 +34,11 @@ DESCRIPTION
     ${SCRIPT} is a quick kubernetes (k8s) utility to port-forward a pod to localhost (127.0.0.1). ${SCRIPT} prompts for:
       - <NAMESPACE> (defaults to current ns. See kubens(1))
       - <POD> (defaults to "1")
-      - <LOCAL_PORT> (If "-p" or "--port" is envoked, designate an available local port. Defaults to the first exposed port of the pod)
-      - <REMOTE_PORT> (If "-p" or "--port" is envoked, select from the list of remote ports to forward.)
     ENTER to use defaults.
 
 OPTIONS
     -h, --help
         Show this help message
-    -p, --port
-        Port-forwards to a lone port on the remote host
     -d, --daemon
         Runs kpoof command as a daemon
     -k, --killd
@@ -127,17 +123,6 @@ port_x() {
 
 port_number_list() {
   port_list | nl
-}
-
-port_sniff() {
-  port_list | sed -n ${REMOTE_PORT:-1}p
-}
-
-po_pf() {
-  local LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
-  local CMD=(kubectl port-forward $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)})
-  if [ ! -z "${KILLD:-}" ]; then killd "${CMD[@]}"; exit 0; fi
-  checkdaemon "${CMD[@]}"
 }
 
 po_pf_all() {
@@ -241,10 +226,9 @@ for arg in "$@"; do
   esac
 done
 
-while getopts :phdka OPT; do
+while getopts :hdka OPT; do
   case $OPT in
     h ) HELP=true;;
-    p ) PORT=true;;
     d ) DAEMON=true;;
     k ) KILLD=true;;
     a ) KILLDALL=true;;
@@ -264,12 +248,5 @@ else
   ns=$(ns_current)
   echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
   echo 'Pod number? (default 1):'; po_number_list; read POD;
-
-  if [[ ${PORT:-} == 'true' ]]; then
-    echo 'Remote port number? (default 1):'; port_number_list; read REMOTE_PORT;
-    echo "Local port number? (defaults to $(port_sniff)):"; read LOCAL_PORT;
-    po_pf
-  else
-    po_pf_all
-  fi
+  po_pf_all
 fi
