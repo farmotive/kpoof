@@ -135,9 +135,9 @@ port_sniff() {
 
 po_pf() {
   local LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
-  local CMD="kubectl port-forward $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)}"
-  if [ ! -z "${KILLD:-}" ]; then killd ${CMD}; exit 0; fi
-  checkdaemon ${CMD}
+  local CMD=(kubectl port-forward $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)})
+  if [ ! -z "${KILLD:-}" ]; then killd "${CMD[@]}"; exit 0; fi
+  checkdaemon "${CMD[@]}"
 }
 
 po_pf_all() {
