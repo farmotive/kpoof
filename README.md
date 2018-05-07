@@ -29,6 +29,12 @@ SYNOPSIS
           Show this help message
       -p, --port
           Port-forwards to a lone port on the remote host
+      -d, --daemon
+          Run kpoof as a daemon
+      -k, --killd
+          Kills a kpoof command daemon, if running
+      -a, --killd-all
+          Kills all running kpoof command daemons defined in $HOME/.kpoof/kpoofd
 
 SEE ALSO
     kubectx(1), kubens(1), kex(1)

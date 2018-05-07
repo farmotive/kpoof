@@ -7,6 +7,12 @@
 set -eou pipefail
 IFS=$'\n\t'
 
+NOW=$(date +"%F")
+NOWT=$(date +"%T")
+APPDIR="${HOME}"/.kpoof
+DAEMONSFILE="${APPDIR}"/kpoofd
+LOGFILE=${APPDIR}/kpoof-${NOW}-${NOWT}.log
+
 # We do this so the called script name variable is available in utility functions
 # below, in case of name change, brew alias, etc.
 SCRIPT=`basename ${BASH_SOURCE[0]}`
@@ -37,6 +43,12 @@ OPTIONS
         Show this help message
     -p, --port
         Port-forwards to a lone port on the remote host
+    -d, --daemon
+        Runs kpoof command as a daemon
+    -k, --killd
+        Kills a kpoof command daemon, if running
+    -a, --killd-all
+        Kills all running kpoof command daemons defined in $HOME/.kpoof/kpoofd
 
 SEE ALSO
     kubectx(1), kubens(1), kex(1)
@@ -122,14 +134,97 @@ port_sniff() {
 }
 
 po_pf() {
-  LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
-  kubectl port-forward \
-    $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)}
+  local LOCAL_CHECK=$(port_check ${LOCAL_PORT:-$(port_sniff)})
+  local CMD="kubectl port-forward $(ns_param) $(po_select) $LOCAL_CHECK:${REMOTE_PORT:-$(port_sniff)}"
+  if [ ! -z "${KILLD:-}" ]; then killd ${CMD}; exit 0; fi
+  checkdaemon ${CMD}
 }
 
 po_pf_all() {
-    kubectl port-forward \
-    $(ns_param) $(po_select) $(port_x)
+  # Store CMD as an array, because passing strings with colons is unpredictable.
+  local CMD=(kubectl port-forward $(ns_param) $(po_select) $(port_x))
+  if [ ! -z "${KILLD:-}" ]; then killd "${CMD[@]}"; exit 0; fi
+  checkdaemon "${CMD[@]}"
+}
+
+# Requires daemon process CMD array as argument.
+killd() {
+  CMD=("$@")
+  STRING=$(printf ' %q' "${CMD[@]}"  | sed -e 's/^[[:space:]]*//')
+  local PID=$(ps -aef | grep $STRING | grep -v grep | awk '{print $2}')
+  if [ ! -z "${PID}" ]; then
+    kill -9 ${PID} || true
+  fi
+
+  # Remove CMD entry from daemon file.
+  local TMPFILE="${APPDIR}"/kpoofd.tmp
+  if [ -f $DAEMONSFILE ]; then
+    awk -v cmd=$STRING '$0!=cmd {print $0}' $DAEMONSFILE > $TMPFILE && mv $TMPFILE $DAEMONSFILE
+  fi
+}
+
+killdall() {
+  if [ -f $DAEMONSFILE ]; then
+    while read CMD;
+    do
+      killd ${CMD}
+    done < $DAEMONSFILE
+    rm $DAEMONSFILE
+  fi
+}
+
+# Requires daemon process CMD array as argument.
+checkdaemon() {
+  CMD=("$@")
+  if [ ! -z "${DAEMON:-}" ]; then
+    daemon "${CMD[@]}"
+  else
+    "${CMD[@]}"
+  fi
+}
+
+# Requires daemon process CMD array as argument.
+# Each daemon CMD (see `man ps`) consists of a unique `kubectl port-forward`
+# command string, represented in this argument as an array.
+daemon() {
+  CMD=("$@")
+  STRING=$(printf ' %q' "${CMD[@]}"  | sed -e 's/^[[:space:]]*//')
+  # Always kill any running version of this exact process to avoid port-forward
+  # conflicts.
+  # Note that we could alternatively check whether the process is already
+  # running, and if so, not bother killing/restarting the daemon. owever, if the
+  # earlier running process is running but no longer works, then the user would
+  # need to `kpoof -k` to kill it and then `kpoof -d` to start it again. Since
+  # the port-forward process is quick to both kill and start, we do it for the
+  # user automatically to save manual checking and frustration.
+  killd "${CMD[@]}"
+
+  # Start daemon.
+  "${CMD[@]}" > ${LOGFILE} 2>&1 &
+
+  # Add to list of running daemons.
+  echo $STRING >> ${DAEMONSFILE}
+
+  # Give the user initial output so they have immediate port-forwarding info
+  # even when daemonizing. However, it may take a short time for the kubectl
+  # port-forward command to write output to the logfile, so wait a reasonable
+  # amount of time (10 seconds total, at 1/2 second intervals).
+  for i in $(seq 1 20);
+  do
+    OUTPUT=$(cat ${LOGFILE})
+    if [ ! -z "$OUTPUT" ]; then
+      echo "${OUTPUT}"
+      echo 'When finished, stop this daemon process with kpoof -k, or stop all kubectl port-forward processes with kpoof -a'
+      exit 0
+    fi
+    echo 'Port forwarding is still pending. Waiting...'
+    sleep 0.5
+  done
+  echo "Port forwarding didn't resolve within 10 seconds"
+}
+
+initappdir() {
+  mkdir -p ${APPDIR}
 }
 
 # Transform long options to short ones. Sick trick.
@@ -138,15 +233,21 @@ for arg in "$@"; do
   shift
   case "$arg" in
     "--help")       set -- "$@" "-h" ;;
-    "--port")        set -- "$@" "-p" ;;
+    "--port")       set -- "$@" "-p" ;;
+    "--daemon")     set -- "$@" "-d" ;;
+    "--killd")      set -- "$@" "-k" ;;
+    "--killd-all")  set -- "$@" "-a" ;;
     *)              set -- "$@" "$arg"
   esac
 done
 
-while getopts :ph OPT; do
+while getopts :phdka OPT; do
   case $OPT in
     h ) HELP=true;;
     p ) PORT=true;;
+    d ) DAEMON=true;;
+    k ) KILLD=true;;
+    a ) KILLDALL=true;;
     \?) echo "Unknown option: -$OPTARG" >&2; exit 1;;
     : ) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
   esac
@@ -156,7 +257,10 @@ shift $((OPTIND-1))
 # Help and port-forward should not happen simultaneously, so elif.
 if [[ ${HELP:-} == 'true' ]]; then
   usage; exit 0
+elif [[ ${KILLDALL:-} == 'true' ]]; then
+  killdall; exit 0
 else
+  initappdir
   ns=$(ns_current)
   echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
   echo 'Pod number? (default 1):'; po_number_list; read POD;
