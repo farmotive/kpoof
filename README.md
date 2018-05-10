@@ -1,4 +1,4 @@
-The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.  If the target pod has more than one exposed port, you may select a lone port with the `-p` or `--port` flag.  The default behavior of kpoof is to port-forward all exposed ports.  Because \*nix denies binding to ports below 1001, kpoof assigns a port of `n`+50000, where `n` is a sub-1001 port.
+The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.  The default behavior of kpoof is to port-forward all exposed ports.  Because \*nix denies binding to ports below 1001, kpoof assigns a port of `n`+50000, where `n` is a sub-1001 port.
 
 # kpoof
 
@@ -20,15 +20,11 @@ SYNOPSIS
       ${SCRIPT} is a quick kubernetes (k8s) utility to port-forward a pod to localhost (127.0.0.1). ${SCRIPT} prompts for:
         - <NAMESPACE> (defaults to current ns. See kubens(1))
         - <POD> (defaults to "1")
-        - <LOCAL_PORT> (If "-p" or "--port" is envoked, designate an available local port. Defaults to the first exposed port of the pod)
-        - <REMOTE_PORT> (If "-p" or "--port" is envoked, select from the list of remote ports to forward.)
       ENTER to use defaults.
 
   OPTIONS
       -h, --help
           Show this help message
-      -p, --port
-          Port-forwards to a lone port on the remote host
       -d, --daemon
           Run kpoof as a daemon
       -k, --killd
