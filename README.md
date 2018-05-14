@@ -1,8 +1,8 @@
-The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.  The default behavior of kpoof is to port-forward all exposed ports.  Because \*nix denies binding to ports below 1001, kpoof assigns a port of `n`+50000, where `n` is a sub-1001 port.
+The purpose of kpoof is to provide an opinionated port-forwarder into a kubernetes container.  Traditionally, if one wanted to port-forward into a kubernetes container, one had to `kubectl get pods --namespace foo`, visually identify the pod of interest, copy that pod to the buffer, and then `kubectl --namespace foo port-forward <paste_buffer> <local-port>:<remote-port>` to port-forward into the pod.  This simple utility aims to provide a namespace-specific pod selector for quick port-forwarding.  The default behavior of kpoof is to port-forward all exposed ports.  Because \*nix denies binding to ports below 1024, kpoof assigns a port of `n`+50000, where `n` is a sub-1024 port.
 
 # kpoof
 
-[![asciicast](https://asciinema.org/a/142452.png)](https://asciinema.org/a/142452)
+[![asciicast](https://asciinema.org/a/TuNDK7LKpA3Zamu73BY87RflT.png)](https://asciinema.org/a/TuNDK7LKpA3Zamu73BY87RflT)
 
 ```sh
 kpoof(1)
