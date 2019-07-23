@@ -2,7 +2,7 @@ The purpose of kpoof is to provide an opinionated port-forwarder into a kubernet
 
 # kpoof
 
-[![asciicast](https://asciinema.org/a/TuNDK7LKpA3Zamu73BY87RflT.png)](https://asciinema.org/a/TuNDK7LKpA3Zamu73BY87RflT)
+[![asciicast](https://asciinema.org/a/142452.svg)](https://asciinema.org/a/142452)
 
 ```sh
 kpoof(1)
