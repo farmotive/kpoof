@@ -32,6 +32,7 @@ SYNOPSIS
 
 DESCRIPTION
     ${SCRIPT} is a quick kubernetes (k8s) utility to port-forward a pod to localhost (127.0.0.1). ${SCRIPT} prompts for:
+      - <CONTEXT> (defaults to current context)
       - <NAMESPACE> (defaults to current ns. See kubens(1))
       - <POD> (defaults to "1")
     ENTER to use defaults.
@@ -51,10 +52,40 @@ SEE ALSO
 EOF
 }
 
+cur_ctx() {
+ kubectl config current-context 
+}
+
+#Test the following, may not be needed
+ctx_param() {
+  local ctx=$(ctx_select)
+  if [[ ! -z ${ctx:-} ]]; then
+    echo "--context=${ctx}"
+  fi
+}
+
+ctx_list() {
+  kubectl config get-contexts -o=name | sort -n
+}
+
+ctx_number_list() {
+  ctx_list | nl -d " "
+}
+
+ctx_select() {
+  if [[ ! -z ${CTX:-} ]]; then
+    ctx_list | sed -n ${CTX}p
+  elif [[ ! -z ${CONTEXT:-} ]]; then
+    echo $CONTEXT
+  else
+    cur_ctx
+  fi
+}
+
 ns_current() {
   # Borrowed partly from kubens current_namespace().
-  cur_ctx=$(kubectl config current-context)
-  echo "$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"${cur_ctx}\")].context.namespace}")"
+  # cur_ctx=$(kubectl config current-context)
+  echo "$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"$(ctx_select)\")].context.namespace}")"
 }
 
 ns_param() {
@@ -65,7 +96,7 @@ ns_param() {
 }
 
 ns_list() {
-  kubectl get namespaces -o=jsonpath='{range .items[*].metadata.name}{@}{"\n"}{end}'
+  kubectl $(ctx_param) get namespaces -o=jsonpath='{range .items[*].metadata.name}{@}{"\n"}{end}'
 }
 
 ns_number_list() {
@@ -83,7 +114,7 @@ ns_select() {
 }
 
 po_list() {
-  kubectl $(ns_param) \
+  kubectl $(ctx_param) $(ns_param) \
     get pods \
     -o=jsonpath='{range .items[*].metadata.name}{@}{"\n"}{end}'
 }
@@ -97,7 +128,7 @@ po_select() {
 }
 
 port_list() {
-  kubectl get po $(ns_param) $(po_select)\
+  kubectl get po $(ctx_param) $(ns_param) $(po_select)\
   -o=jsonpath='{..containerPort}' \
   | tr " " "\n" \
   | sort -u
@@ -127,7 +158,7 @@ port_number_list() {
 
 po_pf_all() {
   # Store CMD as an array, because passing strings with colons is unpredictable.
-  local CMD=(kubectl port-forward $(ns_param) $(po_select) $(port_x))
+  local CMD=(kubectl port-forward $(ctx_param) $(ns_param) $(po_select) $(port_x))
   if [ ! -z "${KILLD:-}" ]; then killd "${CMD[@]}"; exit 0; fi
   checkdaemon "${CMD[@]}"
 }
@@ -246,6 +277,8 @@ elif [[ ${KILLDALL:-} == 'true' ]]; then
 else
   initappdir
   ns=$(ns_current)
+  ctx=$(cur_ctx)
+  echo "Cluster? (default ${ctx:-default}):"; ctx_number_list; read CTX;
   echo "Namespace? (default ${ns:-default}):"; ns_number_list; read NS;
   echo 'Pod number? (default 1):'; po_number_list; read POD;
   po_pf_all
